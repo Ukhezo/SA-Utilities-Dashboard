@@ -1,0 +1,630 @@
+<!doctype html>
+<html lang="en-ZA">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#102b37">
+    <title>SA Utilities | Weather and load-shedding</title>
+    <style>
+        :root {
+            color-scheme: light;
+            --ink: #102b37;
+            --muted: #587078;
+            --line: #dce8e7;
+            --paper: #f3f8f6;
+            --green: #15765e;
+            --green-light: #e5f4ed;
+            --amber: #bb7020;
+            --amber-light: #fff3df;
+            --red: #a53d36;
+            --shadow: 0 16px 42px rgba(16, 43, 55, .08);
+        }
+
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-width: 320px;
+            background:
+                radial-gradient(circle at 85% 4%, rgba(234, 193, 111, .20), transparent 25rem),
+                linear-gradient(180deg, #edf5f2 0, var(--paper) 22rem);
+            color: var(--ink);
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+        }
+
+        button, input, select { font: inherit; }
+        button { cursor: pointer; }
+        button:disabled { cursor: wait; opacity: .58; }
+        a { color: var(--green); }
+        .shell { width: min(1120px, calc(100% - 36px)); margin: 0 auto; }
+        .topbar { display: flex; align-items: center; justify-content: space-between; padding: 28px 0 46px; }
+        .brand { display: flex; align-items: center; gap: 12px; font-size: 15px; font-weight: 800; letter-spacing: -.02em; }
+        .brand-mark {
+            display: grid; width: 42px; height: 42px; place-items: center; border-radius: 14px;
+            background: var(--ink); color: #f5ca7a; font-size: 20px;
+        }
+        .live-pill { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; }
+        .live-dot { width: 8px; height: 8px; border-radius: 50%; background: #2f9a70; box-shadow: 0 0 0 4px #dcefe5; }
+        .intro { max-width: 680px; padding-bottom: 30px; }
+        .eyebrow { margin: 0 0 10px; color: var(--green); font-size: 11px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; }
+        h1 { margin: 0; font-size: clamp(32px, 5vw, 52px); line-height: 1.05; letter-spacing: -.055em; }
+        .intro-copy { max-width: 590px; margin: 14px 0 0; color: var(--muted); font-size: 15px; line-height: 1.7; }
+        .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; padding-bottom: 42px; }
+        .card { min-width: 0; padding: 24px; border: 1px solid rgba(220, 232, 231, .9); border-radius: 22px; background: rgba(255,255,255,.92); box-shadow: var(--shadow); }
+        .card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
+        .card-kicker { margin: 0 0 6px; color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; }
+        h2 { margin: 0; font-size: 20px; letter-spacing: -.035em; }
+        .card-icon { display: grid; width: 42px; height: 42px; flex: 0 0 auto; place-items: center; border-radius: 14px; background: var(--green-light); color: var(--green); font-size: 20px; }
+        .card-icon.amber { background: var(--amber-light); color: var(--amber); }
+        .form-row { display: flex; gap: 8px; }
+        .field { width: 100%; min-width: 0; padding: 12px 13px; border: 1px solid var(--line); border-radius: 12px; background: #fbfdfc; color: var(--ink); font-size: 13px; }
+        .field:focus { outline: 3px solid rgba(21, 118, 94, .16); border-color: var(--green); }
+        label { display: block; margin: 0 0 7px; color: #34515a; font-size: 11px; font-weight: 750; }
+        .field-group { margin-top: 15px; }
+        .button {
+            min-height: 44px; padding: 0 16px; border: 0; border-radius: 12px; background: var(--ink);
+            color: #fff; font-size: 12px; font-weight: 750; transition: transform .15s, background .15s;
+        }
+        .button:hover:not(:disabled) { transform: translateY(-1px); background: #194654; }
+        .button.green { background: var(--green); }
+        .button.green:hover:not(:disabled) { background: #0e604b; }
+        .button.full { width: 100%; margin-top: 9px; }
+        .status { min-height: 18px; margin: 12px 0 0; color: var(--muted); font-size: 11px; line-height: 1.55; }
+        .status.error { color: var(--red); }
+        .current-weather {
+            display: flex; align-items: center; gap: 16px; margin-top: 18px; padding: 18px;
+            border-radius: 17px; background: linear-gradient(115deg, #e8f5ee, #f3f8f5);
+        }
+        .weather-symbol { width: 56px; text-align: center; font-size: 39px; line-height: 1; }
+        .weather-place { color: var(--muted); font-size: 11px; font-weight: 700; }
+        .weather-reading { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+        .temperature { font-size: 35px; font-weight: 800; letter-spacing: -.06em; }
+        .condition { color: #46616a; font-size: 12px; }
+        .metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 9px; }
+        .metric { padding: 11px 12px; border-radius: 12px; background: #f5f8f7; }
+        .metric-label { display: block; color: var(--muted); font-size: 10px; }
+        .metric strong { display: block; margin-top: 4px; font-size: 12px; }
+        .subheading { margin: 20px 0 9px; color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+        .forecast { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 7px; }
+        .day-card { min-width: 0; padding: 10px 6px; border: 1px solid #e8efed; border-radius: 12px; text-align: center; }
+        .day-name { color: var(--muted); font-size: 10px; font-weight: 750; }
+        .day-symbol { margin: 7px 0; font-size: 18px; }
+        .day-temp { font-size: 9px; font-weight: 700; white-space: nowrap; }
+        .helper { margin: 12px 0 0; color: #71858a; font-size: 10px; line-height: 1.55; }
+        .helper a { text-decoration-thickness: 1px; text-underline-offset: 2px; }
+        .hidden { display: none !important; }
+        .sr-only {
+            position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+            overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+        }
+        .results { margin-top: 17px; padding: 17px; border: 1px solid #e8efed; border-radius: 16px; background: #f7faf9; }
+        .stage-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+        .stage-label { color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+        .stage-value { margin-top: 5px; font-size: 19px; font-weight: 800; letter-spacing: -.03em; }
+        .event-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+        .event { padding: 12px; border: 1px solid #e6eeeb; border-radius: 12px; background: white; }
+        .event-title { margin: 0; font-size: 12px; font-weight: 750; }
+        .event-time { margin: 5px 0 0; color: var(--muted); font-size: 10px; }
+        .footer { padding: 0 0 30px; color: #71858a; font-size: 10px; line-height: 1.6; }
+        .footer strong { color: #48636b; }
+        @media (max-width: 760px) {
+            .topbar { padding: 20px 0 35px; }
+            .grid { grid-template-columns: 1fr; }
+            .card { padding: 20px; }
+        }
+        @media (max-width: 420px) {
+            .shell { width: min(100% - 24px, 1120px); }
+            .live-pill { font-size: 10px; }
+            .metrics { grid-template-columns: 1fr; }
+            .metric { display: flex; justify-content: space-between; align-items: center; }
+            .metric strong { margin: 0; }
+            .day-temp { font-size: 8px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="shell">
+        <header class="topbar">
+            <div class="brand"><span class="brand-mark" aria-hidden="true">⚡</span><span>SA Utilities</span></div>
+            <div class="live-pill"><span class="live-dot" aria-hidden="true"></span>Live data dashboard</div>
+        </header>
+
+        <main>
+            <section class="intro" aria-labelledby="page-title">
+                <p class="eyebrow">South Africa · Daily outlook</p>
+                <h1 id="page-title">Plan your day around the power and the weather.</h1>
+                <p class="intro-copy">Check a local forecast and look up a load-shedding schedule for your area. Data is fetched live from the providers; this dashboard does not invent a schedule when a service is unavailable.</p>
+            </section>
+
+            <div class="grid">
+                <section class="card" aria-labelledby="weather-heading">
+                    <div class="card-head">
+                        <div>
+                            <p class="card-kicker">Local forecast</p>
+                            <h2 id="weather-heading">Weather in South Africa</h2>
+                        </div>
+                        <span class="card-icon" aria-hidden="true">☼</span>
+                    </div>
+
+                    <form id="weather-form" class="form-row">
+                        <label class="sr-only" for="weather-city">City or town in South Africa</label>
+                        <input class="field" id="weather-city" name="city" value="Cape Town" required autocomplete="address-level2" placeholder="Enter a city or town">
+                        <button class="button green" id="weather-submit" type="submit">Search</button>
+                    </form>
+                    <p class="status" id="weather-status" role="status" aria-live="polite">Weather data is provided by Open-Meteo.</p>
+
+                    <div class="hidden" id="weather-results">
+                        <div class="current-weather">
+                            <span class="weather-symbol" id="weather-symbol" aria-hidden="true"></span>
+                            <div>
+                                <div class="weather-place" id="weather-place"></div>
+                                <div class="weather-reading">
+                                    <span class="temperature" id="weather-temperature"></span>
+                                    <span class="condition" id="weather-condition"></span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="metrics">
+                            <div class="metric"><span class="metric-label">Feels like</span><strong id="weather-feels"></strong></div>
+                            <div class="metric"><span class="metric-label">Humidity</span><strong id="weather-humidity"></strong></div>
+                            <div class="metric"><span class="metric-label">Wind</span><strong id="weather-wind"></strong></div>
+                        </div>
+                        <p class="subheading">5-day outlook</p>
+                        <div class="forecast" id="weather-forecast"></div>
+                    </div>
+                    <p class="helper">Forecast by <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer">Open-Meteo</a>. Search is limited to South Africa. Updated <span id="weather-updated">when loaded</span>.</p>
+                </section>
+
+                <section class="card" aria-labelledby="power-heading">
+                    <div class="card-head">
+                        <div>
+                            <p class="card-kicker">Area schedule</p>
+                            <h2 id="power-heading">Load-shedding</h2>
+                        </div>
+                        <span class="card-icon amber" aria-hidden="true">ϟ</span>
+                    </div>
+
+                    <p class="helper" style="margin-top:-10px">An EskomSePush API token is required. The dashboard never stores it; API requests may use your account credits.</p>
+
+                    <div class="field-group">
+                        <label for="load-token">EskomSePush API token</label>
+                        <input class="field" id="load-token" type="password" autocomplete="off" spellcheck="false" placeholder="Paste your token for this session">
+                    </div>
+                    <form id="area-form" class="field-group">
+                        <label for="area-query">City, suburb, or area</label>
+                        <div class="form-row">
+                            <input class="field" id="area-query" name="area" value="Cape Town" required autocomplete="address-level2">
+                            <button class="button" id="area-search-submit" type="submit">Find area</button>
+                        </div>
+                    </form>
+                    <p class="status" id="load-status" role="status" aria-live="polite">Enter your token to search for an area schedule.</p>
+
+                    <div id="area-picker" class="hidden field-group">
+                        <label for="area-select">Choose the matching area</label>
+                        <select class="field" id="area-select"></select>
+                        <button class="button full" id="area-details-submit" type="button" disabled>Find available schedules</button>
+                    </div>
+
+                    <div id="schedule-picker" class="hidden field-group">
+                        <label for="schedule-select">Choose a load-shedding schedule</label>
+                        <select class="field" id="schedule-select"></select>
+                        <button class="button green full" id="schedule-submit" type="button" disabled>Get schedule</button>
+                    </div>
+
+                    <div class="results hidden" id="load-results">
+                        <div class="stage-row">
+                            <div>
+                                <div class="stage-label">National grid status</div>
+                                <div class="stage-value" id="load-stage">Not loaded</div>
+                            </div>
+                            <span class="card-icon amber" aria-hidden="true">⚡</span>
+                        </div>
+                        <p class="subheading">Upcoming events · <span id="schedule-name"></span></p>
+                        <ul class="event-list" id="load-events"></ul>
+                    </div>
+                    <p class="helper">Get a token and review API access terms in the <a href="https://developer.sepush.co.za/business/3.1/" target="_blank" rel="noopener noreferrer">EskomSePush Business API docs</a>. Version 3.1 is marked beta.</p>
+                </section>
+            </div>
+        </main>
+
+        <footer class="footer"><strong>Data note:</strong> Weather and load-shedding information depend on third-party API availability and may change. Always check official local notices for critical planning.</footer>
+    </div>
+
+    <script>
+        const WEATHER_GEOCODING_URL = 'https://geocoding-api.open-meteo.com/v1/search';
+        const WEATHER_FORECAST_URL = 'https://api.open-meteo.com/v1/forecast';
+        const ESKOM_API_BASE = 'https://developer.sepush.co.za/business/3.1';
+        const weatherRequestId = { value: 0 };
+        const searchRequestId = { value: 0 };
+        const areaRequestId = { value: 0 };
+        const scheduleRequestId = { value: 0 };
+        const areas = new Map();
+        const schedules = new Map();
+
+        async function fetchJson(url, options = {}) {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 12000);
+            try {
+                const response = await fetch(url, { ...options, signal: controller.signal });
+                let data;
+                try {
+                    data = await response.json();
+                } catch (error) {
+                    if (response.ok) throw new Error('The service returned invalid JSON.');
+                    data = {};
+                }
+                if (!response.ok) {
+                    const detail = typeof data.error === 'string' ? data.error : `HTTP ${response.status}`;
+                    throw new Error(`${detail} (HTTP ${response.status})`);
+                }
+                return data;
+            } catch (error) {
+                if (error.name === 'AbortError') throw new Error('The request timed out. Please try again.');
+                throw error;
+            } finally {
+                clearTimeout(timeout);
+            }
+        }
+
+        function setStatus(id, message, isError = false) {
+            const element = document.getElementById(id);
+            element.textContent = message;
+            element.classList.toggle('error', isError);
+        }
+
+        function weatherDescription(code) {
+            const labels = {
+                0: 'Clear sky', 1: 'Mainly clear', 2: 'Partly cloudy', 3: 'Overcast',
+                45: 'Fog', 48: 'Rime fog', 51: 'Light drizzle', 53: 'Drizzle',
+                55: 'Heavy drizzle', 56: 'Freezing drizzle', 57: 'Heavy freezing drizzle',
+                61: 'Light rain', 63: 'Rain', 65: 'Heavy rain', 66: 'Freezing rain',
+                67: 'Heavy freezing rain', 71: 'Light snow', 73: 'Snow', 75: 'Heavy snow',
+                77: 'Snow grains', 80: 'Light rain showers', 81: 'Rain showers',
+                82: 'Heavy rain showers', 85: 'Snow showers', 86: 'Heavy snow showers',
+                95: 'Thunderstorm', 96: 'Thunderstorm with hail', 99: 'Thunderstorm with heavy hail'
+            };
+            return labels[code] || 'Conditions unavailable';
+        }
+
+        function weatherSymbol(code) {
+            if (code <= 1) return '☀';
+            if (code <= 3 || code === 45 || code === 48) return '☁';
+            if (code >= 71 && code <= 86) return '❄';
+            if (code >= 95) return '⚡';
+            if (code >= 51 && code <= 67 || code >= 80 && code <= 82) return '☂';
+            return '·';
+        }
+
+        function temperature(value) {
+            return Number.isFinite(value) ? `${Math.round(value)}°C` : 'N/A';
+        }
+
+        async function loadWeather() {
+            const id = ++weatherRequestId.value;
+            const city = document.getElementById('weather-city').value.trim();
+            const button = document.getElementById('weather-submit');
+            if (!city) {
+                setStatus('weather-status', 'Enter a South African city or town.', true);
+                return;
+            }
+
+            button.disabled = true;
+            document.getElementById('weather-results').classList.add('hidden');
+            document.getElementById('weather-updated').textContent = 'loading';
+            setStatus('weather-status', 'Finding the location and loading the forecast...');
+            try {
+                const searchUrl = new URL(WEATHER_GEOCODING_URL);
+                searchUrl.search = new URLSearchParams({
+                    name: city, count: '1', language: 'en', format: 'json', countryCode: 'ZA'
+                });
+                const locationData = await fetchJson(searchUrl);
+                const location = locationData.results && locationData.results[0];
+                if (!location) throw new Error(`No South African location found for "${city}".`);
+
+                const forecastUrl = new URL(WEATHER_FORECAST_URL);
+                forecastUrl.search = new URLSearchParams({
+                    latitude: String(location.latitude),
+                    longitude: String(location.longitude),
+                    current: 'temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m',
+                    daily: 'weather_code,temperature_2m_max,temperature_2m_min',
+                    temperature_unit: 'celsius',
+                    wind_speed_unit: 'kmh',
+                    forecast_days: '5',
+                    timezone: 'auto'
+                });
+                const forecast = await fetchJson(forecastUrl);
+                if (id !== weatherRequestId.value) return;
+                if (!forecast.current || !forecast.daily || !Array.isArray(forecast.daily.time)) {
+                    throw new Error('The weather service returned an incomplete forecast.');
+                }
+
+                const current = forecast.current;
+                document.getElementById('weather-place').textContent = [location.name, location.admin1].filter(Boolean).join(', ');
+                document.getElementById('weather-symbol').textContent = weatherSymbol(current.weather_code);
+                document.getElementById('weather-temperature').textContent = temperature(current.temperature_2m);
+                document.getElementById('weather-condition').textContent = weatherDescription(current.weather_code);
+                document.getElementById('weather-feels').textContent = temperature(current.apparent_temperature);
+                document.getElementById('weather-humidity').textContent = Number.isFinite(current.relative_humidity_2m) ? `${current.relative_humidity_2m}%` : 'N/A';
+                document.getElementById('weather-wind').textContent = Number.isFinite(current.wind_speed_10m) ? `${Math.round(current.wind_speed_10m)} km/h` : 'N/A';
+                document.getElementById('weather-updated').textContent = typeof current.time === 'string' ? current.time.split('T').pop() : 'N/A';
+
+                const forecastGrid = document.getElementById('weather-forecast');
+                forecastGrid.replaceChildren();
+                forecast.daily.time.slice(0, 5).forEach((dateValue, index) => {
+                    const date = new Date(`${dateValue}T12:00:00`);
+                    const dayLabel = Number.isNaN(date.getTime()) ? dateValue : date.toLocaleDateString('en-ZA', { weekday: 'short' });
+                    const card = document.createElement('div');
+                    card.className = 'day-card';
+                    const day = document.createElement('div');
+                    day.className = 'day-name';
+                    day.textContent = dayLabel;
+                    const symbol = document.createElement('div');
+                    symbol.className = 'day-symbol';
+                    symbol.textContent = weatherSymbol(forecast.daily.weather_code[index]);
+                    symbol.setAttribute('aria-hidden', 'true');
+                    const range = document.createElement('div');
+                    range.className = 'day-temp';
+                    range.textContent = `${temperature(forecast.daily.temperature_2m_max[index])} / ${temperature(forecast.daily.temperature_2m_min[index])}`;
+                    card.append(day, symbol, range);
+                    forecastGrid.appendChild(card);
+                });
+
+                document.getElementById('weather-results').classList.remove('hidden');
+                setStatus('weather-status', 'Live forecast loaded from Open-Meteo.');
+            } catch (error) {
+                if (id === weatherRequestId.value) {
+                    document.getElementById('weather-updated').textContent = 'unavailable';
+                    setStatus('weather-status', `Could not load weather: ${error.message}`, true);
+                }
+            } finally {
+                if (id === weatherRequestId.value) button.disabled = false;
+            }
+        }
+
+        function loadUrl(path, params = {}) {
+            const url = new URL(`${ESKOM_API_BASE}/${path}`);
+            url.search = new URLSearchParams(params);
+            return url;
+        }
+
+        function loadHeaders(token) {
+            return { Accept: 'application/json', token };
+        }
+
+        function clearLoadResults() {
+            searchRequestId.value++;
+            areaRequestId.value++;
+            scheduleRequestId.value++;
+            areas.clear();
+            schedules.clear();
+            document.getElementById('area-picker').classList.add('hidden');
+            document.getElementById('schedule-picker').classList.add('hidden');
+            document.getElementById('load-results').classList.add('hidden');
+            document.getElementById('area-details-submit').disabled = true;
+            document.getElementById('schedule-submit').disabled = true;
+            document.getElementById('area-search-submit').disabled = false;
+        }
+
+        async function searchAreas(event) {
+            event.preventDefault();
+            const id = ++searchRequestId.value;
+            const token = document.getElementById('load-token').value.trim();
+            const query = document.getElementById('area-query').value.trim();
+            const button = document.getElementById('area-search-submit');
+
+            if (!token) {
+                setStatus('load-status', 'Enter an EskomSePush API token before searching. It is not saved by this page.', true);
+                return;
+            }
+            if (!query) {
+                setStatus('load-status', 'Enter a city, suburb, or area to search.', true);
+                return;
+            }
+
+            areas.clear();
+            schedules.clear();
+            document.getElementById('area-picker').classList.add('hidden');
+            document.getElementById('schedule-picker').classList.add('hidden');
+            document.getElementById('load-results').classList.add('hidden');
+            button.disabled = true;
+            setStatus('load-status', 'Searching EskomSePush areas...');
+            try {
+                const data = await fetchJson(loadUrl('areas_search', { text: query }), {
+                    headers: loadHeaders(token)
+                });
+                if (id !== searchRequestId.value) return;
+                if (!Array.isArray(data.areas)) throw new Error('The area-search response did not contain an areas list.');
+
+                const select = document.getElementById('area-select');
+                select.replaceChildren();
+                const placeholder = document.createElement('option');
+                placeholder.value = '';
+                placeholder.textContent = 'Select an area';
+                placeholder.disabled = true;
+                placeholder.selected = true;
+                select.appendChild(placeholder);
+
+                data.areas.forEach(area => {
+                    if (!area || area.id === undefined || typeof area.name !== 'string') return;
+                    const areaId = String(area.id);
+                    areas.set(areaId, area);
+                    const option = document.createElement('option');
+                    option.value = areaId;
+                    option.textContent = [area.name, area.municipality, area.province].filter(Boolean).join(' - ');
+                    select.appendChild(option);
+                });
+                if (!areas.size) throw new Error('No matching areas were found. Try a nearby suburb or city.');
+                document.getElementById('area-picker').classList.remove('hidden');
+                document.getElementById('area-details-submit').disabled = true;
+                setStatus('load-status', `${areas.size} matching area${areas.size === 1 ? '' : 's'} found. Choose one to continue.`);
+            } catch (error) {
+                if (id === searchRequestId.value) setStatus('load-status', `Could not search areas: ${error.message}`, true);
+            } finally {
+                if (id === searchRequestId.value) button.disabled = false;
+            }
+        }
+
+        async function findSchedules() {
+            const id = ++areaRequestId.value;
+            const token = document.getElementById('load-token').value.trim();
+            const areaId = document.getElementById('area-select').value;
+            const area = areas.get(areaId);
+            const button = document.getElementById('area-details-submit');
+            if (!token || !area) {
+                setStatus('load-status', 'Enter your token and choose an area first.', true);
+                return;
+            }
+
+            button.disabled = true;
+            schedules.clear();
+            document.getElementById('schedule-picker').classList.add('hidden');
+            document.getElementById('schedule-submit').disabled = true;
+            document.getElementById('load-results').classList.add('hidden');
+            setStatus('load-status', 'Finding schedules for the selected area...');
+            try {
+                const data = await fetchJson(loadUrl('area', { id: areaId }), { headers: loadHeaders(token) });
+                if (id !== areaRequestId.value) return;
+                if (!Array.isArray(data.schedules)) throw new Error('The area response did not contain a schedules list.');
+                const matches = data.schedules.filter(item => item && item.type === 'loadshedding' && item.id !== undefined);
+                if (!matches.length) throw new Error('No load-shedding schedules were returned for this area.');
+
+                const select = document.getElementById('schedule-select');
+                select.replaceChildren();
+                matches.forEach(item => {
+                    const scheduleId = String(item.id);
+                    schedules.set(scheduleId, item);
+                    const option = document.createElement('option');
+                    option.value = scheduleId;
+                    option.textContent = `${scheduleId}${item.auto_enabled ? ' (recommended)' : ''}`;
+                    select.appendChild(option);
+                });
+                const recommended = matches.find(item => item.auto_enabled) || matches[0];
+                select.value = String(recommended.id);
+                document.getElementById('schedule-picker').classList.remove('hidden');
+                document.getElementById('schedule-submit').disabled = false;
+                const areaName = data.name || area.name;
+                setStatus('load-status', `${matches.length} load-shedding schedule${matches.length === 1 ? '' : 's'} found for ${areaName}.`);
+            } catch (error) {
+                if (id === areaRequestId.value) setStatus('load-status', `Could not find schedules: ${error.message}`, true);
+            } finally {
+                if (id === areaRequestId.value) button.disabled = false;
+            }
+        }
+
+        function formatEventTime(value) {
+            if (typeof value !== 'string') return '';
+            const date = new Date(value);
+            if (Number.isNaN(date.getTime())) return value;
+            return date.toLocaleString('en-ZA', {
+                timeZone: 'Africa/Johannesburg', weekday: 'short', day: 'numeric',
+                month: 'short', hour: '2-digit', minute: '2-digit', hour12: false
+            });
+        }
+
+        function renderEvents(data) {
+            if (!Array.isArray(data.events)) throw new Error('The schedule response did not contain an events list.');
+            const list = document.getElementById('load-events');
+            list.replaceChildren();
+            if (!data.events.length) {
+                const item = document.createElement('li');
+                item.className = 'event';
+                item.textContent = 'No upcoming events were returned for this schedule.';
+                list.appendChild(item);
+                return 0;
+            }
+            data.events.forEach(event => {
+                const item = document.createElement('li');
+                item.className = 'event';
+                const title = document.createElement('p');
+                title.className = 'event-title';
+                title.textContent = event.note || 'Load-shedding event';
+                item.appendChild(title);
+                const start = formatEventTime(event.start);
+                const end = formatEventTime(event.end);
+                if (start || end) {
+                    const time = document.createElement('p');
+                    time.className = 'event-time';
+                    time.textContent = [start, end].filter(Boolean).join(' - ');
+                    item.appendChild(time);
+                }
+                list.appendChild(item);
+            });
+            return data.events.length;
+        }
+
+        async function loadSchedule() {
+            const id = ++scheduleRequestId.value;
+            const token = document.getElementById('load-token').value.trim();
+            const areaId = document.getElementById('area-select').value;
+            const area = areas.get(areaId);
+            const scheduleId = document.getElementById('schedule-select').value;
+            const button = document.getElementById('schedule-submit');
+            if (!token || !area || !schedules.has(scheduleId)) {
+                setStatus('load-status', 'Choose an area and schedule before continuing.', true);
+                return;
+            }
+
+            button.disabled = true;
+            document.getElementById('load-results').classList.add('hidden');
+            setStatus('load-status', 'Loading the schedule and national grid status...');
+            try {
+                const [scheduleResult, statusResult] = await Promise.allSettled([
+                    fetchJson(loadUrl('schedule', { id: scheduleId }), { headers: loadHeaders(token) }),
+                    fetchJson(loadUrl('status'), { headers: loadHeaders(token) })
+                ]);
+                if (id !== scheduleRequestId.value) return;
+                if (scheduleResult.status === 'rejected') throw scheduleResult.reason;
+
+                const data = scheduleResult.value;
+                const count = renderEvents(data);
+                const national = statusResult.status === 'fulfilled'
+                    ? statusResult.value.status && statusResult.value.status.eskom
+                    : null;
+                const stage = national && national.stage;
+                document.getElementById('load-stage').textContent = stage === undefined || stage === null
+                    ? 'Not reported'
+                    : Number(stage) === 0 ? 'Stage 0 - no load-shedding reported' : `Stage ${stage}`;
+                document.getElementById('schedule-name').textContent = data.name || scheduleId;
+                document.getElementById('load-results').classList.remove('hidden');
+                const areaName = [area.name, area.municipality].filter(Boolean).join(', ');
+                let message = `${count} upcoming event${count === 1 ? '' : 's'} loaded for ${areaName}.`;
+                if (statusResult.status === 'rejected') {
+                    message += ` National status unavailable: ${statusResult.reason.message}`;
+                }
+                setStatus('load-status', message, statusResult.status === 'rejected');
+            } catch (error) {
+                if (id === scheduleRequestId.value) setStatus('load-status', `Could not load the schedule: ${error.message}`, true);
+            } finally {
+                if (id === scheduleRequestId.value) button.disabled = false;
+            }
+        }
+
+        document.getElementById('weather-form').addEventListener('submit', event => {
+            event.preventDefault();
+            loadWeather();
+        });
+        document.getElementById('area-form').addEventListener('submit', searchAreas);
+        document.getElementById('area-select').addEventListener('change', event => {
+            areaRequestId.value++;
+            scheduleRequestId.value++;
+            schedules.clear();
+            document.getElementById('area-details-submit').disabled = !event.target.value;
+            document.getElementById('schedule-picker').classList.add('hidden');
+            document.getElementById('schedule-submit').disabled = true;
+            document.getElementById('load-results').classList.add('hidden');
+        });
+        document.getElementById('schedule-select').addEventListener('change', event => {
+            scheduleRequestId.value++;
+            document.getElementById('schedule-submit').disabled = !event.target.value;
+        });
+        document.getElementById('area-details-submit').addEventListener('click', findSchedules);
+        document.getElementById('schedule-submit').addEventListener('click', loadSchedule);
+        document.getElementById('load-token').addEventListener('input', clearLoadResults);
+        document.getElementById('area-query').addEventListener('input', clearLoadResults);
+        window.addEventListener('pagehide', () => {
+            document.getElementById('load-token').value = '';
+        });
+
+        loadWeather();
+    </script>
+</body>
+</html>
