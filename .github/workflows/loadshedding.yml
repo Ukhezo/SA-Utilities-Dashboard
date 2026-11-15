@@ -1,0 +1,41 @@
+name: Update load-shedding data
+
+on:
+  schedule:
+    - cron: "17 */4 * * *"   # every 4 hours (12 API calls a day, free tier allows 50)
+  workflow_dispatch:          # lets you run it by hand from the Actions tab
+
+permissions:
+  contents: write
+
+concurrency:
+  group: loadshedding
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Fetch from EskomSePush
+        env:
+          ESP_TOKEN: ${{ secrets.ESP_TOKEN }}
+          ESP_AREA: ${{ vars.ESP_AREA }}
+        run: python scripts/fetch_loadshedding.py
+
+      - name: Save the update
+        run: |
+          if [ -z "$(git status --porcelain data/)" ]; then
+            echo "No new data to save."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/loadshedding.json
+          git commit -m "Update load-shedding data"
+          git push

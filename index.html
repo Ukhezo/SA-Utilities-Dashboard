@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#102b37">
-    <title>Umvoti Ward Weather | SA Utilities</title>
+    <title>SA Utilities Dashboard | Weather &amp; Load-shedding</title>
     <style>
         :root {
             color-scheme: light;
@@ -89,18 +89,6 @@
         .day-name { color: var(--muted); font-size: 10px; font-weight: 750; }
         .day-symbol { margin: 7px 0; font-size: 18px; }
         .day-temp { font-size: 9px; font-weight: 700; white-space: nowrap; }
-        .ward-panel { margin-bottom: 18px; }
-        .ward-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 9px; }
-        .ward-tile { min-width: 0; padding: 14px; border: 1px solid #e4edea; border-radius: 15px; background: #f8fbfa; }
-        .ward-tile-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-        .ward-label-group { min-width: 0; }
-        .ward-label { color: var(--muted); font-size: 11px; font-weight: 800; }
-        .ward-boundary-name { display: block; margin-top: 3px; color: #71858a; font-size: 9px; font-weight: 650; }
-        .ward-symbol { font-size: 19px; line-height: 1; }
-        .ward-temperature { margin: 10px 0 0; font-size: 25px; font-weight: 800; letter-spacing: -.05em; }
-        .ward-condition { min-height: 28px; margin: 3px 0 9px; color: #46616a; font-size: 10px; line-height: 1.4; }
-        .ward-details { display: flex; flex-wrap: wrap; gap: 5px 10px; color: var(--muted); font-size: 9px; }
-        .ward-details span { white-space: nowrap; }
         .helper { margin: 12px 0 0; color: #71858a; font-size: 10px; line-height: 1.55; }
         .helper a { text-decoration-thickness: 1px; text-underline-offset: 2px; }
         .hidden { display: none !important; }
@@ -116,19 +104,23 @@
         .event { padding: 12px; border: 1px solid #e6eeeb; border-radius: 12px; background: white; }
         .event-title { margin: 0; font-size: 12px; font-weight: 750; }
         .event-time { margin: 5px 0 0; color: var(--muted); font-size: 10px; }
+        .stage-badge {
+            display: grid; width: 46px; height: 46px; place-items: center; border-radius: 14px;
+            background: var(--green-light); color: var(--green); font-size: 20px; font-weight: 800;
+        }
+        .stage-badge.on { background: var(--amber-light); color: var(--amber); }
+        .next-stage { margin: 10px 0 0; color: var(--muted); font-size: 11px; }
+        .event.now { border-color: #f0c78f; background: var(--amber-light); }
         .footer { padding: 0 0 30px; color: #71858a; font-size: 10px; line-height: 1.6; }
         .footer strong { color: #48636b; }
         @media (max-width: 760px) {
             .topbar { padding: 20px 0 35px; }
             .grid { grid-template-columns: 1fr; }
-            .ward-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
             .card { padding: 20px; }
         }
         @media (max-width: 420px) {
             .shell { width: min(100% - 24px, 1120px); }
             .live-pill { font-size: 10px; }
-            .ward-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-            .ward-tile { padding: 12px; }
             .metrics { grid-template-columns: 1fr; }
             .metric { display: flex; justify-content: space-between; align-items: center; }
             .metric strong { margin: 0; }
@@ -145,22 +137,9 @@
 
         <main>
             <section class="intro" aria-labelledby="page-title">
-                <p class="eyebrow">Umvoti Municipality · KwaZulu-Natal</p>
-                <h1 id="page-title">Live weather in Umvoti, ward by ward.</h1>
-                <p class="intro-copy">Compare live forecast conditions across Wards 1–14, check weather in other South African towns, and look up an area load-shedding schedule.</p>
-            </section>
-
-            <section class="card ward-panel" aria-labelledby="ward-weather-heading">
-                <div class="card-head">
-                    <div>
-                        <p class="card-kicker">Live ward outlook</p>
-                        <h2 id="ward-weather-heading">Umvoti Municipality · Wards 1–14</h2>
-                    </div>
-                    <button class="button green" id="ward-refresh" type="button">Refresh</button>
-                </div>
-                <p class="status" id="ward-status" role="status" aria-live="polite">Loading forecast for all 14 wards...</p>
-                <div class="ward-grid" id="ward-grid" aria-busy="true"></div>
-                <p class="helper">Weather is an Open-Meteo model forecast for each ward's representative centroid, not a reading from a weather station in every ward. Ward centroids are derived from <a href="https://www.geoboundaries.org/api/current/gbOpen/ZAF/ADM4/" target="_blank" rel="noopener noreferrer">geoBoundaries 2020 ward polygons</a>, sourced from the South African Municipal Demarcation Board (CC BY 3.0 IGO).</p>
+                <p class="eyebrow">South Africa · Live data</p>
+                <h1 id="page-title">Weather and load-shedding, in one place.</h1>
+                <p class="intro-copy">Check the live weather and 5-day forecast for any South African city or town, and see the latest load-shedding stage and upcoming outages.</p>
             </section>
 
             <div class="grid">
@@ -205,51 +184,27 @@
                 <section class="card" aria-labelledby="power-heading">
                     <div class="card-head">
                         <div>
-                            <p class="card-kicker">Area schedule</p>
+                            <p class="card-kicker">Eskom status</p>
                             <h2 id="power-heading">Load-shedding</h2>
                         </div>
                         <span class="card-icon amber" aria-hidden="true">ϟ</span>
                     </div>
 
-                    <p class="helper" style="margin-top:-10px">An EskomSePush API token is required. The dashboard never stores it; API requests may use your account credits.</p>
-
-                    <div class="field-group">
-                        <label for="load-token">EskomSePush API token</label>
-                        <input class="field" id="load-token" type="password" autocomplete="off" spellcheck="false" placeholder="Paste your token for this session">
-                    </div>
-                    <form id="area-form" class="field-group">
-                        <label for="area-query">City, suburb, or area</label>
-                        <div class="form-row">
-                            <input class="field" id="area-query" name="area" value="Cape Town" required autocomplete="address-level2">
-                            <button class="button" id="area-search-submit" type="submit">Find area</button>
-                        </div>
-                    </form>
-                    <p class="status" id="load-status" role="status" aria-live="polite">Enter your token to search for an area schedule.</p>
-
-                    <div id="area-picker" class="hidden field-group">
-                        <label for="area-select">Choose the matching area</label>
-                        <select class="field" id="area-select"></select>
-                        <button class="button full" id="area-details-submit" type="button" disabled>Find available schedules</button>
-                    </div>
-
-                    <div id="schedule-picker" class="hidden field-group">
-                        <label for="schedule-select">Choose a load-shedding schedule</label>
-                        <select class="field" id="schedule-select"></select>
-                        <button class="button green full" id="schedule-submit" type="button" disabled>Get schedule</button>
-                    </div>
+                    <p class="status" id="load-status" role="status" aria-live="polite">Loading the latest load-shedding update...</p>
 
                     <div class="results hidden" id="load-results">
                         <div class="stage-row">
                             <div>
-                                <div class="stage-label">National grid status</div>
+                                <div class="stage-label">National stage</div>
                                 <div class="stage-value" id="load-stage">Not loaded</div>
                             </div>
-                            <span class="card-icon amber" aria-hidden="true">⚡</span>
+                            <span class="stage-badge" id="load-badge" aria-hidden="true">–</span>
                         </div>
-                        <p class="subheading">Upcoming events · <span id="schedule-name"></span></p>
+                        <p class="next-stage hidden" id="load-next"></p>
+                        <p class="subheading">Upcoming in <span id="load-area"></span></p>
                         <ul class="event-list" id="load-events"></ul>
                     </div>
-                    <p class="helper">Get a token and review API access terms in the <a href="https://developer.sepush.co.za/business/3.1/" target="_blank" rel="noopener noreferrer">EskomSePush Business API docs</a>. Version 3.1 is marked beta.</p>
+                    <p class="helper">Data from the <a href="https://developer.sepush.co.za/business/3.1/" target="_blank" rel="noopener noreferrer">EskomSePush API</a>, refreshed every 4 hours by a GitHub Actions job. Last update: <span id="load-updated">loading</span>. Always check official Eskom or municipal notices for critical planning.</p>
                 </section>
             </div>
         </main>
@@ -260,30 +215,7 @@
     <script>
         const WEATHER_GEOCODING_URL = 'https://geocoding-api.open-meteo.com/v1/search';
         const WEATHER_FORECAST_URL = 'https://api.open-meteo.com/v1/forecast';
-        const ESKOM_API_BASE = 'https://developer.sepush.co.za/business/3.1';
-        const UMVOTI_WARDS = [
-            { number: 1, boundaryName: 'Umvoti 001', latitude: -29.219597, longitude: 30.889168 },
-            { number: 2, boundaryName: 'Umvoti 002', latitude: -29.157613, longitude: 30.816054 },
-            { number: 3, boundaryName: 'Umvoti 003', latitude: -29.182850, longitude: 30.759987 },
-            { number: 4, boundaryName: 'Umvoti 004', latitude: -29.079240, longitude: 30.821827 },
-            { number: 5, boundaryName: 'Umvoti 005', latitude: -29.005631, longitude: 30.840147 },
-            { number: 6, boundaryName: 'Umvoti 006', latitude: -28.820388, longitude: 30.873667 },
-            { number: 7, boundaryName: 'Umvoti 007', latitude: -29.075085, longitude: 30.632394 },
-            { number: 8, boundaryName: 'Umvoti 008', latitude: -28.944798, longitude: 30.428496 },
-            { number: 9, boundaryName: 'Umvoti 009', latitude: -29.056574, longitude: 30.591121 },
-            { number: 10, boundaryName: 'Umvoti 010', latitude: -29.167457, longitude: 30.547045 },
-            { number: 11, boundaryName: 'Umvoti 011', latitude: -29.059873, longitude: 30.425071 },
-            { number: 12, boundaryName: 'Umvoti 012', latitude: -28.828285, longitude: 30.705565 },
-            { number: 13, boundaryName: 'Umvoti 013', latitude: -29.139733, longitude: 30.720963 },
-            { number: 14, boundaryName: 'Umvoti 014', latitude: -28.927490, longitude: 30.658845 }
-        ];
         const weatherRequestId = { value: 0 };
-        const wardWeatherRequestId = { value: 0 };
-        const searchRequestId = { value: 0 };
-        const areaRequestId = { value: 0 };
-        const scheduleRequestId = { value: 0 };
-        const areas = new Map();
-        const schedules = new Map();
 
         async function fetchJson(url, options = {}) {
             const controller = new AbortController();
@@ -341,109 +273,6 @@
 
         function temperature(value) {
             return Number.isFinite(value) ? `${Math.round(value)}°C` : 'N/A';
-        }
-
-        function createWardTile(ward, forecast) {
-            const tile = document.createElement('article');
-            tile.className = 'ward-tile';
-
-            const header = document.createElement('div');
-            header.className = 'ward-tile-head';
-            const labelGroup = document.createElement('div');
-            labelGroup.className = 'ward-label-group';
-            const label = document.createElement('span');
-            label.className = 'ward-label';
-            label.textContent = `Ward ${ward.number}`;
-            const boundaryName = document.createElement('span');
-            boundaryName.className = 'ward-boundary-name';
-            boundaryName.textContent = ward.boundaryName;
-            labelGroup.append(label, boundaryName);
-            const symbol = document.createElement('span');
-            symbol.className = 'ward-symbol';
-            symbol.setAttribute('aria-hidden', 'true');
-            symbol.textContent = forecast ? weatherSymbol(forecast.current.weather_code) : '·';
-            header.append(labelGroup, symbol);
-
-            const reading = document.createElement('p');
-            reading.className = 'ward-temperature';
-            reading.textContent = forecast ? temperature(forecast.current.temperature_2m) : '—';
-
-            const condition = document.createElement('p');
-            condition.className = 'ward-condition';
-            condition.textContent = forecast ? weatherDescription(forecast.current.weather_code) : 'Waiting for forecast';
-
-            const details = document.createElement('div');
-            details.className = 'ward-details';
-            const highLow = document.createElement('span');
-            const dailyHigh = forecast && forecast.daily.temperature_2m_max[0];
-            const dailyLow = forecast && forecast.daily.temperature_2m_min[0];
-            highLow.textContent = forecast ? `H ${temperature(dailyHigh)} · L ${temperature(dailyLow)}` : 'Today: —';
-            const rainChance = document.createElement('span');
-            const rainValue = forecast && forecast.daily.precipitation_probability_max[0];
-            rainChance.textContent = forecast && Number.isFinite(rainValue) ? `Rain ${rainValue}%` : 'Rain —';
-            details.append(highLow, rainChance);
-
-            tile.append(header, reading, condition, details);
-            return tile;
-        }
-
-        function renderWardWeather(forecasts) {
-            const grid = document.getElementById('ward-grid');
-            grid.replaceChildren();
-            UMVOTI_WARDS.forEach((ward, index) => {
-                grid.appendChild(createWardTile(ward, forecasts[index]));
-            });
-            grid.setAttribute('aria-busy', 'false');
-        }
-
-        async function loadWardWeather() {
-            const requestId = ++wardWeatherRequestId.value;
-            const button = document.getElementById('ward-refresh');
-            const grid = document.getElementById('ward-grid');
-            button.disabled = true;
-            grid.setAttribute('aria-busy', 'true');
-            grid.replaceChildren(...UMVOTI_WARDS.map(ward => createWardTile(ward, null)));
-            setStatus('ward-status', 'Loading current conditions for all 14 ward centroids...');
-
-            try {
-                const url = new URL(WEATHER_FORECAST_URL);
-                url.search = new URLSearchParams({
-                    latitude: UMVOTI_WARDS.map(ward => ward.latitude).join(','),
-                    longitude: UMVOTI_WARDS.map(ward => ward.longitude).join(','),
-                    current: 'temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m',
-                    daily: 'weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max',
-                    temperature_unit: 'celsius',
-                    wind_speed_unit: 'kmh',
-                    forecast_days: '1',
-                    timezone: 'auto'
-                });
-                const forecasts = await fetchJson(url);
-                if (requestId !== wardWeatherRequestId.value) return;
-                if (!Array.isArray(forecasts) || forecasts.length !== UMVOTI_WARDS.length) {
-                    throw new Error(`The weather service returned ${Array.isArray(forecasts) ? forecasts.length : 0} of 14 ward forecasts.`);
-                }
-                if (forecasts.some(forecast =>
-                    !forecast.current ||
-                    !forecast.daily ||
-                    !Array.isArray(forecast.daily.temperature_2m_max) ||
-                    !Array.isArray(forecast.daily.temperature_2m_min) ||
-                    !Array.isArray(forecast.daily.precipitation_probability_max)
-                )) {
-                    throw new Error('The weather service returned an incomplete forecast for one or more wards.');
-                }
-
-                renderWardWeather(forecasts);
-                const updated = forecasts[0].current.time;
-                const updateTime = typeof updated === 'string' ? updated.split('T').pop() : 'unknown time';
-                setStatus('ward-status', `Live forecasts loaded for all 14 wards · Updated ${updateTime} South African time.`);
-            } catch (error) {
-                if (requestId === wardWeatherRequestId.value) {
-                    renderWardWeather(UMVOTI_WARDS.map(() => null));
-                    setStatus('ward-status', `Could not load ward weather: ${error.message}`, true);
-                }
-            } finally {
-                if (requestId === wardWeatherRequestId.value) button.disabled = false;
-            }
         }
 
         async function loadWeather() {
@@ -528,135 +357,7 @@
             }
         }
 
-        function loadUrl(path, params = {}) {
-            const url = new URL(`${ESKOM_API_BASE}/${path}`);
-            url.search = new URLSearchParams(params);
-            return url;
-        }
-
-        function loadHeaders(token) {
-            return { Accept: 'application/json', token };
-        }
-
-        function clearLoadResults() {
-            searchRequestId.value++;
-            areaRequestId.value++;
-            scheduleRequestId.value++;
-            areas.clear();
-            schedules.clear();
-            document.getElementById('area-picker').classList.add('hidden');
-            document.getElementById('schedule-picker').classList.add('hidden');
-            document.getElementById('load-results').classList.add('hidden');
-            document.getElementById('area-details-submit').disabled = true;
-            document.getElementById('schedule-submit').disabled = true;
-            document.getElementById('area-search-submit').disabled = false;
-        }
-
-        async function searchAreas(event) {
-            event.preventDefault();
-            const id = ++searchRequestId.value;
-            const token = document.getElementById('load-token').value.trim();
-            const query = document.getElementById('area-query').value.trim();
-            const button = document.getElementById('area-search-submit');
-
-            if (!token) {
-                setStatus('load-status', 'Enter an EskomSePush API token before searching. It is not saved by this page.', true);
-                return;
-            }
-            if (!query) {
-                setStatus('load-status', 'Enter a city, suburb, or area to search.', true);
-                return;
-            }
-
-            areas.clear();
-            schedules.clear();
-            document.getElementById('area-picker').classList.add('hidden');
-            document.getElementById('schedule-picker').classList.add('hidden');
-            document.getElementById('load-results').classList.add('hidden');
-            button.disabled = true;
-            setStatus('load-status', 'Searching EskomSePush areas...');
-            try {
-                const data = await fetchJson(loadUrl('areas_search', { text: query }), {
-                    headers: loadHeaders(token)
-                });
-                if (id !== searchRequestId.value) return;
-                if (!Array.isArray(data.areas)) throw new Error('The area-search response did not contain an areas list.');
-
-                const select = document.getElementById('area-select');
-                select.replaceChildren();
-                const placeholder = document.createElement('option');
-                placeholder.value = '';
-                placeholder.textContent = 'Select an area';
-                placeholder.disabled = true;
-                placeholder.selected = true;
-                select.appendChild(placeholder);
-
-                data.areas.forEach(area => {
-                    if (!area || area.id === undefined || typeof area.name !== 'string') return;
-                    const areaId = String(area.id);
-                    areas.set(areaId, area);
-                    const option = document.createElement('option');
-                    option.value = areaId;
-                    option.textContent = [area.name, area.municipality, area.province].filter(Boolean).join(' - ');
-                    select.appendChild(option);
-                });
-                if (!areas.size) throw new Error('No matching areas were found. Try a nearby suburb or city.');
-                document.getElementById('area-picker').classList.remove('hidden');
-                document.getElementById('area-details-submit').disabled = true;
-                setStatus('load-status', `${areas.size} matching area${areas.size === 1 ? '' : 's'} found. Choose one to continue.`);
-            } catch (error) {
-                if (id === searchRequestId.value) setStatus('load-status', `Could not search areas: ${error.message}`, true);
-            } finally {
-                if (id === searchRequestId.value) button.disabled = false;
-            }
-        }
-
-        async function findSchedules() {
-            const id = ++areaRequestId.value;
-            const token = document.getElementById('load-token').value.trim();
-            const areaId = document.getElementById('area-select').value;
-            const area = areas.get(areaId);
-            const button = document.getElementById('area-details-submit');
-            if (!token || !area) {
-                setStatus('load-status', 'Enter your token and choose an area first.', true);
-                return;
-            }
-
-            button.disabled = true;
-            schedules.clear();
-            document.getElementById('schedule-picker').classList.add('hidden');
-            document.getElementById('schedule-submit').disabled = true;
-            document.getElementById('load-results').classList.add('hidden');
-            setStatus('load-status', 'Finding schedules for the selected area...');
-            try {
-                const data = await fetchJson(loadUrl('area', { id: areaId }), { headers: loadHeaders(token) });
-                if (id !== areaRequestId.value) return;
-                if (!Array.isArray(data.schedules)) throw new Error('The area response did not contain a schedules list.');
-                const matches = data.schedules.filter(item => item && item.type === 'loadshedding' && item.id !== undefined);
-                if (!matches.length) throw new Error('No load-shedding schedules were returned for this area.');
-
-                const select = document.getElementById('schedule-select');
-                select.replaceChildren();
-                matches.forEach(item => {
-                    const scheduleId = String(item.id);
-                    schedules.set(scheduleId, item);
-                    const option = document.createElement('option');
-                    option.value = scheduleId;
-                    option.textContent = `${scheduleId}${item.auto_enabled ? ' (recommended)' : ''}`;
-                    select.appendChild(option);
-                });
-                const recommended = matches.find(item => item.auto_enabled) || matches[0];
-                select.value = String(recommended.id);
-                document.getElementById('schedule-picker').classList.remove('hidden');
-                document.getElementById('schedule-submit').disabled = false;
-                const areaName = data.name || area.name;
-                setStatus('load-status', `${matches.length} load-shedding schedule${matches.length === 1 ? '' : 's'} found for ${areaName}.`);
-            } catch (error) {
-                if (id === areaRequestId.value) setStatus('load-status', `Could not find schedules: ${error.message}`, true);
-            } finally {
-                if (id === areaRequestId.value) button.disabled = false;
-            }
-        }
+        const LOADSHEDDING_DATA = 'data/loadshedding.json';
 
         function formatEventTime(value) {
             if (typeof value !== 'string') return '';
@@ -668,81 +369,85 @@
             });
         }
 
-        function renderEvents(data) {
-            if (!Array.isArray(data.events)) throw new Error('The schedule response did not contain an events list.');
+        function timeAgo(date) {
+            const minutes = Math.round((Date.now() - date.getTime()) / 60000);
+            if (minutes < 1) return 'just now';
+            if (minutes < 60) return `${minutes} min ago`;
+            const hours = Math.round(minutes / 60);
+            if (hours < 48) return `${hours} hour${hours === 1 ? '' : 's'} ago`;
+            return `${Math.round(hours / 24)} days ago`;
+        }
+
+        function renderEvents(events) {
             const list = document.getElementById('load-events');
             list.replaceChildren();
-            if (!data.events.length) {
+            const now = Date.now();
+            const upcoming = events.filter(event => !event.end || new Date(event.end).getTime() > now);
+            if (!upcoming.length) {
                 const item = document.createElement('li');
                 item.className = 'event';
-                item.textContent = 'No upcoming events were returned for this schedule.';
+                item.textContent = 'No load-shedding scheduled for this area right now.';
                 list.appendChild(item);
                 return 0;
             }
-            data.events.forEach(event => {
+            upcoming.slice(0, 6).forEach(event => {
                 const item = document.createElement('li');
-                item.className = 'event';
+                const start = new Date(event.start).getTime();
+                item.className = start <= now ? 'event now' : 'event';
                 const title = document.createElement('p');
                 title.className = 'event-title';
-                title.textContent = event.note || 'Load-shedding event';
-                item.appendChild(title);
-                const start = formatEventTime(event.start);
-                const end = formatEventTime(event.end);
-                if (start || end) {
-                    const time = document.createElement('p');
-                    time.className = 'event-time';
-                    time.textContent = [start, end].filter(Boolean).join(' - ');
-                    item.appendChild(time);
-                }
+                title.textContent = (start <= now ? 'Happening now · ' : '') + (event.note || 'Load-shedding');
+                const time = document.createElement('p');
+                time.className = 'event-time';
+                time.textContent = [formatEventTime(event.start), formatEventTime(event.end)].filter(Boolean).join(' – ');
+                item.append(title, time);
                 list.appendChild(item);
             });
-            return data.events.length;
+            return upcoming.length;
         }
 
-        async function loadSchedule() {
-            const id = ++scheduleRequestId.value;
-            const token = document.getElementById('load-token').value.trim();
-            const areaId = document.getElementById('area-select').value;
-            const area = areas.get(areaId);
-            const scheduleId = document.getElementById('schedule-select').value;
-            const button = document.getElementById('schedule-submit');
-            if (!token || !area || !schedules.has(scheduleId)) {
-                setStatus('load-status', 'Choose an area and schedule before continuing.', true);
-                return;
-            }
-
-            button.disabled = true;
-            document.getElementById('load-results').classList.add('hidden');
-            setStatus('load-status', 'Loading the schedule and national grid status...');
+        async function loadLoadshedding() {
             try {
-                const [scheduleResult, statusResult] = await Promise.allSettled([
-                    fetchJson(loadUrl('schedule', { id: scheduleId }), { headers: loadHeaders(token) }),
-                    fetchJson(loadUrl('status'), { headers: loadHeaders(token) })
-                ]);
-                if (id !== scheduleRequestId.value) return;
-                if (scheduleResult.status === 'rejected') throw scheduleResult.reason;
-
-                const data = scheduleResult.value;
-                const count = renderEvents(data);
-                const national = statusResult.status === 'fulfilled'
-                    ? statusResult.value.status && statusResult.value.status.eskom
-                    : null;
-                const stage = national && national.stage;
-                document.getElementById('load-stage').textContent = stage === undefined || stage === null
-                    ? 'Not reported'
-                    : Number(stage) === 0 ? 'Stage 0 - no load-shedding reported' : `Stage ${stage}`;
-                document.getElementById('schedule-name').textContent = data.name || scheduleId;
-                document.getElementById('load-results').classList.remove('hidden');
-                const areaName = [area.name, area.municipality].filter(Boolean).join(', ');
-                let message = `${count} upcoming event${count === 1 ? '' : 's'} loaded for ${areaName}.`;
-                if (statusResult.status === 'rejected') {
-                    message += ` National status unavailable: ${statusResult.reason.message}`;
+                const response = await fetch(`${LOADSHEDDING_DATA}?t=${Date.now()}`, { cache: 'no-store' });
+                if (response.status === 404) {
+                    setStatus('load-status', 'Load-shedding updates are not set up yet. Add an EskomSePush token as the ESP_TOKEN repository secret (see the README).');
+                    document.getElementById('load-updated').textContent = 'not yet';
+                    return;
                 }
-                setStatus('load-status', message, statusResult.status === 'rejected');
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+                if (!data.national || !Array.isArray(data.events) || !data.area) throw new Error('the saved data is incomplete');
+
+                const stage = data.national.stage;
+                const stageText = Number.isInteger(stage) ? (stage === 0 ? 'No load-shedding' : `Stage ${stage}`) : 'Not reported';
+                document.getElementById('load-stage').textContent = stageText;
+                const badge = document.getElementById('load-badge');
+                badge.textContent = Number.isInteger(stage) ? String(stage) : '–';
+                badge.classList.toggle('on', Number.isInteger(stage) && stage > 0);
+
+                const next = (data.national.next_stages || []).find(item => item.start && new Date(item.start).getTime() > Date.now());
+                const nextLine = document.getElementById('load-next');
+                if (next) {
+                    nextLine.textContent = `Next change: Stage ${next.stage} from ${formatEventTime(next.start)}`;
+                    nextLine.classList.remove('hidden');
+                } else {
+                    nextLine.classList.add('hidden');
+                }
+
+                document.getElementById('load-area').textContent = [data.area.name, data.area.region].filter(Boolean).join(', ');
+                const count = renderEvents(data.events);
+                document.getElementById('load-results').classList.remove('hidden');
+
+                const updated = new Date(data.updated_at);
+                const valid = !Number.isNaN(updated.getTime());
+                document.getElementById('load-updated').textContent = valid ? `${formatEventTime(data.updated_at)} (${timeAgo(updated)})` : 'unknown';
+                const stale = valid && Date.now() - updated.getTime() > 12 * 3600 * 1000;
+                setStatus('load-status', stale
+                    ? `This update is ${timeAgo(updated)}, so it may be out of date.`
+                    : `${count} upcoming outage${count === 1 ? '' : 's'} for ${data.area.name}.`, stale);
             } catch (error) {
-                if (id === scheduleRequestId.value) setStatus('load-status', `Could not load the schedule: ${error.message}`, true);
-            } finally {
-                if (id === scheduleRequestId.value) button.disabled = false;
+                document.getElementById('load-updated').textContent = 'unavailable';
+                setStatus('load-status', `Could not load load-shedding data: ${error.message}`, true);
             }
         }
 
@@ -750,31 +455,9 @@
             event.preventDefault();
             loadWeather();
         });
-        document.getElementById('ward-refresh').addEventListener('click', loadWardWeather);
-        document.getElementById('area-form').addEventListener('submit', searchAreas);
-        document.getElementById('area-select').addEventListener('change', event => {
-            areaRequestId.value++;
-            scheduleRequestId.value++;
-            schedules.clear();
-            document.getElementById('area-details-submit').disabled = !event.target.value;
-            document.getElementById('schedule-picker').classList.add('hidden');
-            document.getElementById('schedule-submit').disabled = true;
-            document.getElementById('load-results').classList.add('hidden');
-        });
-        document.getElementById('schedule-select').addEventListener('change', event => {
-            scheduleRequestId.value++;
-            document.getElementById('schedule-submit').disabled = !event.target.value;
-        });
-        document.getElementById('area-details-submit').addEventListener('click', findSchedules);
-        document.getElementById('schedule-submit').addEventListener('click', loadSchedule);
-        document.getElementById('load-token').addEventListener('input', clearLoadResults);
-        document.getElementById('area-query').addEventListener('input', clearLoadResults);
-        window.addEventListener('pagehide', () => {
-            document.getElementById('load-token').value = '';
-        });
 
         loadWeather();
-        loadWardWeather();
+        loadLoadshedding();
     </script>
 </body>
 </html>
