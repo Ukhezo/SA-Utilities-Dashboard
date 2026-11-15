@@ -315,7 +315,7 @@
                 const searchUrl = new URL(WEATHER_GEOCODING_URL);
                 searchUrl.search = new URLSearchParams({
                     name: city, count: '1', language: 'en', format: 'json', countryCode: 'ZA'
-                });
+                }).toString().replace(/\+/g, '%20');
                 const locationData = await fetchJson(searchUrl);
                 const location = locationData.results && locationData.results[0];
                 if (!location) throw new Error(`No South African location found for "${city}".`);
