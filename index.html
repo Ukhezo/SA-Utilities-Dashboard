@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#102b37">
-    <title>SA Utilities | Weather and load-shedding</title>
+    <title>Umvoti Ward Weather | SA Utilities</title>
     <style>
         :root {
             color-scheme: light;
@@ -89,6 +89,16 @@
         .day-name { color: var(--muted); font-size: 10px; font-weight: 750; }
         .day-symbol { margin: 7px 0; font-size: 18px; }
         .day-temp { font-size: 9px; font-weight: 700; white-space: nowrap; }
+        .ward-panel { margin-bottom: 18px; }
+        .ward-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 9px; }
+        .ward-tile { min-width: 0; padding: 14px; border: 1px solid #e4edea; border-radius: 15px; background: #f8fbfa; }
+        .ward-tile-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+        .ward-label { color: var(--muted); font-size: 11px; font-weight: 800; }
+        .ward-symbol { font-size: 19px; line-height: 1; }
+        .ward-temperature { margin: 10px 0 0; font-size: 25px; font-weight: 800; letter-spacing: -.05em; }
+        .ward-condition { min-height: 28px; margin: 3px 0 9px; color: #46616a; font-size: 10px; line-height: 1.4; }
+        .ward-details { display: flex; flex-wrap: wrap; gap: 5px 10px; color: var(--muted); font-size: 9px; }
+        .ward-details span { white-space: nowrap; }
         .helper { margin: 12px 0 0; color: #71858a; font-size: 10px; line-height: 1.55; }
         .helper a { text-decoration-thickness: 1px; text-underline-offset: 2px; }
         .hidden { display: none !important; }
@@ -109,11 +119,14 @@
         @media (max-width: 760px) {
             .topbar { padding: 20px 0 35px; }
             .grid { grid-template-columns: 1fr; }
+            .ward-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
             .card { padding: 20px; }
         }
         @media (max-width: 420px) {
             .shell { width: min(100% - 24px, 1120px); }
             .live-pill { font-size: 10px; }
+            .ward-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .ward-tile { padding: 12px; }
             .metrics { grid-template-columns: 1fr; }
             .metric { display: flex; justify-content: space-between; align-items: center; }
             .metric strong { margin: 0; }
@@ -130,9 +143,22 @@
 
         <main>
             <section class="intro" aria-labelledby="page-title">
-                <p class="eyebrow">South Africa · Daily outlook</p>
-                <h1 id="page-title">Plan your day around the power and the weather.</h1>
-                <p class="intro-copy">Check a local forecast and look up a load-shedding schedule for your area. Data is fetched live from the providers; this dashboard does not invent a schedule when a service is unavailable.</p>
+                <p class="eyebrow">Umvoti Municipality · KwaZulu-Natal</p>
+                <h1 id="page-title">Live weather in Umvoti, ward by ward.</h1>
+                <p class="intro-copy">Compare live forecast conditions across Wards 1–14, check weather in other South African towns, and look up an area load-shedding schedule.</p>
+            </section>
+
+            <section class="card ward-panel" aria-labelledby="ward-weather-heading">
+                <div class="card-head">
+                    <div>
+                        <p class="card-kicker">Live ward outlook</p>
+                        <h2 id="ward-weather-heading">Umvoti Municipality · Wards 1–14</h2>
+                    </div>
+                    <button class="button green" id="ward-refresh" type="button">Refresh</button>
+                </div>
+                <p class="status" id="ward-status" role="status" aria-live="polite">Loading forecast for all 14 wards...</p>
+                <div class="ward-grid" id="ward-grid" aria-busy="true"></div>
+                <p class="helper">Weather is an Open-Meteo model forecast for each ward's representative centroid, not a reading from a weather station in every ward. Ward centroids are derived from <a href="https://www.geoboundaries.org/api/current/gbOpen/ZAF/ADM4/" target="_blank" rel="noopener noreferrer">geoBoundaries 2020 ward polygons</a>, sourced from the South African Municipal Demarcation Board (CC BY 3.0 IGO).</p>
             </section>
 
             <div class="grid">
@@ -233,7 +259,24 @@
         const WEATHER_GEOCODING_URL = 'https://geocoding-api.open-meteo.com/v1/search';
         const WEATHER_FORECAST_URL = 'https://api.open-meteo.com/v1/forecast';
         const ESKOM_API_BASE = 'https://developer.sepush.co.za/business/3.1';
+        const UMVOTI_WARDS = [
+            { number: 1, latitude: -29.219597, longitude: 30.889168 },
+            { number: 2, latitude: -29.157613, longitude: 30.816054 },
+            { number: 3, latitude: -29.182850, longitude: 30.759987 },
+            { number: 4, latitude: -29.079240, longitude: 30.821827 },
+            { number: 5, latitude: -29.005631, longitude: 30.840147 },
+            { number: 6, latitude: -28.820388, longitude: 30.873667 },
+            { number: 7, latitude: -29.075085, longitude: 30.632394 },
+            { number: 8, latitude: -28.944798, longitude: 30.428496 },
+            { number: 9, latitude: -29.056574, longitude: 30.591121 },
+            { number: 10, latitude: -29.167457, longitude: 30.547045 },
+            { number: 11, latitude: -29.059873, longitude: 30.425071 },
+            { number: 12, latitude: -28.828285, longitude: 30.705565 },
+            { number: 13, latitude: -29.139733, longitude: 30.720963 },
+            { number: 14, latitude: -28.927490, longitude: 30.658845 }
+        ];
         const weatherRequestId = { value: 0 };
+        const wardWeatherRequestId = { value: 0 };
         const searchRequestId = { value: 0 };
         const areaRequestId = { value: 0 };
         const scheduleRequestId = { value: 0 };
@@ -296,6 +339,103 @@
 
         function temperature(value) {
             return Number.isFinite(value) ? `${Math.round(value)}°C` : 'N/A';
+        }
+
+        function createWardTile(ward, forecast) {
+            const tile = document.createElement('article');
+            tile.className = 'ward-tile';
+
+            const header = document.createElement('div');
+            header.className = 'ward-tile-head';
+            const label = document.createElement('span');
+            label.className = 'ward-label';
+            label.textContent = `Ward ${ward.number}`;
+            const symbol = document.createElement('span');
+            symbol.className = 'ward-symbol';
+            symbol.setAttribute('aria-hidden', 'true');
+            symbol.textContent = forecast ? weatherSymbol(forecast.current.weather_code) : '·';
+            header.append(label, symbol);
+
+            const reading = document.createElement('p');
+            reading.className = 'ward-temperature';
+            reading.textContent = forecast ? temperature(forecast.current.temperature_2m) : '—';
+
+            const condition = document.createElement('p');
+            condition.className = 'ward-condition';
+            condition.textContent = forecast ? weatherDescription(forecast.current.weather_code) : 'Waiting for forecast';
+
+            const details = document.createElement('div');
+            details.className = 'ward-details';
+            const highLow = document.createElement('span');
+            const dailyHigh = forecast && forecast.daily.temperature_2m_max[0];
+            const dailyLow = forecast && forecast.daily.temperature_2m_min[0];
+            highLow.textContent = forecast ? `H ${temperature(dailyHigh)} · L ${temperature(dailyLow)}` : 'Today: —';
+            const rainChance = document.createElement('span');
+            const rainValue = forecast && forecast.daily.precipitation_probability_max[0];
+            rainChance.textContent = forecast && Number.isFinite(rainValue) ? `Rain ${rainValue}%` : 'Rain —';
+            details.append(highLow, rainChance);
+
+            tile.append(header, reading, condition, details);
+            return tile;
+        }
+
+        function renderWardWeather(forecasts) {
+            const grid = document.getElementById('ward-grid');
+            grid.replaceChildren();
+            UMVOTI_WARDS.forEach((ward, index) => {
+                grid.appendChild(createWardTile(ward, forecasts[index]));
+            });
+            grid.setAttribute('aria-busy', 'false');
+        }
+
+        async function loadWardWeather() {
+            const requestId = ++wardWeatherRequestId.value;
+            const button = document.getElementById('ward-refresh');
+            const grid = document.getElementById('ward-grid');
+            button.disabled = true;
+            grid.setAttribute('aria-busy', 'true');
+            grid.replaceChildren(...UMVOTI_WARDS.map(ward => createWardTile(ward, null)));
+            setStatus('ward-status', 'Loading current conditions for all 14 ward centroids...');
+
+            try {
+                const url = new URL(WEATHER_FORECAST_URL);
+                url.search = new URLSearchParams({
+                    latitude: UMVOTI_WARDS.map(ward => ward.latitude).join(','),
+                    longitude: UMVOTI_WARDS.map(ward => ward.longitude).join(','),
+                    current: 'temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m',
+                    daily: 'weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max',
+                    temperature_unit: 'celsius',
+                    wind_speed_unit: 'kmh',
+                    forecast_days: '1',
+                    timezone: 'auto'
+                });
+                const forecasts = await fetchJson(url);
+                if (requestId !== wardWeatherRequestId.value) return;
+                if (!Array.isArray(forecasts) || forecasts.length !== UMVOTI_WARDS.length) {
+                    throw new Error(`The weather service returned ${Array.isArray(forecasts) ? forecasts.length : 0} of 14 ward forecasts.`);
+                }
+                if (forecasts.some(forecast =>
+                    !forecast.current ||
+                    !forecast.daily ||
+                    !Array.isArray(forecast.daily.temperature_2m_max) ||
+                    !Array.isArray(forecast.daily.temperature_2m_min) ||
+                    !Array.isArray(forecast.daily.precipitation_probability_max)
+                )) {
+                    throw new Error('The weather service returned an incomplete forecast for one or more wards.');
+                }
+
+                renderWardWeather(forecasts);
+                const updated = forecasts[0].current.time;
+                const updateTime = typeof updated === 'string' ? updated.split('T').pop() : 'unknown time';
+                setStatus('ward-status', `Live forecasts loaded for all 14 wards · Updated ${updateTime} South African time.`);
+            } catch (error) {
+                if (requestId === wardWeatherRequestId.value) {
+                    renderWardWeather(UMVOTI_WARDS.map(() => null));
+                    setStatus('ward-status', `Could not load ward weather: ${error.message}`, true);
+                }
+            } finally {
+                if (requestId === wardWeatherRequestId.value) button.disabled = false;
+            }
         }
 
         async function loadWeather() {
@@ -602,6 +742,7 @@
             event.preventDefault();
             loadWeather();
         });
+        document.getElementById('ward-refresh').addEventListener('click', loadWardWeather);
         document.getElementById('area-form').addEventListener('submit', searchAreas);
         document.getElementById('area-select').addEventListener('change', event => {
             areaRequestId.value++;
@@ -625,6 +766,7 @@
         });
 
         loadWeather();
+        loadWardWeather();
     </script>
 </body>
 </html>
